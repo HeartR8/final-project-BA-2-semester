@@ -33,7 +33,16 @@ object CoordinatorEventConsumer {
         }
       }
 
-      def handleEditHotelEvent(hotelId: Hotel.Id): F[Either[ToursServiceError, Unit]] = ???
+      def handleEditHotelEvent(hotel: Hotel): F[Either[ToursServiceError, Unit]] = {
+        val operation = for {
+          _ <- dao.editHotel(hotel)
+        } yield ()
+
+        operation.attempt.map {
+          case Right(_) => Right(())
+          case Left(_) => Left(ToursServiceError.InternalError.default)
+        }
+      }
 
       def handleAddHotelEvent(hotel: Hotel): F[Either[ToursServiceError, Unit]] = {
         val operation = for {
@@ -55,7 +64,7 @@ object CoordinatorEventConsumer {
           case KafkaEvents.Add =>
             handleAddHotelEvent(event.hotel.get)
           case KafkaEvents.Edit =>
-            handleEditHotelEvent(hotelId)
+            handleEditHotelEvent(event.hotel.get)
           case KafkaEvents.Delete =>
             handleDeleteHotelEvent(hotelId)
         }

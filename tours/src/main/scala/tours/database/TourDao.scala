@@ -8,5 +8,7 @@ trait TourDao[F[_]] {
 
   def addHotel(hotel: Hotel): F[Int]
 
+  def editHotel(hotel: Hotel): F[Int]
+
   def deleteHotel(hotelId: Hotel.Id): F[Int]
 }

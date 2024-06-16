@@ -8,7 +8,7 @@ import doobie.implicits._
 
 import java.util.UUID
 
-final class TourDaoImpl[F[_] : MonadCancelThrow](xa: Transactor[F]) extends TourDao[F] {
+final class TourDaoImpl[F[_]: MonadCancelThrow](xa: Transactor[F]) extends TourDao[F] {
   override def add(tour: AddTour): F[Int] = {
     sql"""INSERT INTO tours (tour_id, hotel_id, ticket_to_id, ticket_from_id) VALUES (${UUID.randomUUID().toString}, ${tour.hotelId.toString}, ${tour.ticketToId.toString}, ${tour.ticketFromId.toString});""".update.run.transact(
       xa
@@ -27,14 +27,19 @@ final class TourDaoImpl[F[_] : MonadCancelThrow](xa: Transactor[F]) extends Tour
     )
   }
 
+  def editHotel(hotel: Hotel): F[Int] = {
+    sql"UPDATE hotels SET name = ${hotel.name}, price_per_night = ${hotel.pricePerNight}, description = ${hotel.description} WHERE hotel_id = ${hotel.id.toString};"
+      .update.run.transact(xa)
+  }
+
   override def deleteHotel(hotelId: Hotel.Id): F[Int] = (
     sql"DELETE FROM hotels WHERE hotel_id = ${hotelId.toString};" ++
       sql"DELETE FROM tours WHERE hotel_id = ${hotelId.toString}"
-    ).update.run.transact(
+  ).update.run.transact(
     xa
   )
 }
 
 object TourDaoImpl {
-  def impl[F[_] : MonadCancelThrow](xa: Transactor[F]): TourDaoImpl[F] = new TourDaoImpl[F](xa)
+  def impl[F[_]: MonadCancelThrow](xa: Transactor[F]): TourDaoImpl[F] = new TourDaoImpl[F](xa)
 }

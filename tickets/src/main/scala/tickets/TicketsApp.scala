@@ -7,6 +7,8 @@ import doobie.Transactor
 import fs2.kafka.{KafkaProducer, ProducerSettings}
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware.Logger
+import org.typelevel.log4cats.SelfAwareStructuredLogger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 import pureconfig.ConfigSource
 import pureconfig.generic.auto._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
@@ -15,12 +17,15 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import tickets.config.AppConfig
 import tickets.database.{FlywayMigration, TicketDaoImpl}
 import tickets.endpoints.TicketsController
+import tickets.kafka.EventScheduler
 import tickets.services.TicketsServiceImpl
 
 object TicketsApp {
 
   def run: IO[Unit] = {
     val config = ConfigSource.default.loadOrThrow[AppConfig]
+
+    implicit val logger: SelfAwareStructuredLogger[IO] = Slf4jLogger.getLogger[IO]
 
     database.makeTransactor[IO](config.database).use { xa: Transactor[IO] =>
       val kafkaProducerSettings = ProducerSettings[IO, String, String]
@@ -36,6 +41,12 @@ object TicketsApp {
           ticketDao = TicketDaoImpl.impl[IO](xa)
           ticketsService = TicketsServiceImpl.impl[IO](ticketDao, kafkaProducer)
           ticketsController = TicketsController.impl[IO](ticketsService)
+
+          _ <- EventScheduler.impl(
+            ticketDao,
+            kafkaProducer,
+            config.kafka.topic
+          ).processOutboxEvents.start
 
           endpoints = List(
             ticketsController.endpoints
