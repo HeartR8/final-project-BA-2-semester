@@ -42,7 +42,7 @@ final class TicketsController[F[_]: MonadThrow](
     .serverLogic(_ => ticketsService.getTickets)
 
   private val editTicketDescriptionRoute = baseRoute
-    .post
+    .put
     .summary("Изменение цены билета по id")
     .in(path[Ticket.Id]("id"))
     .in("price")
