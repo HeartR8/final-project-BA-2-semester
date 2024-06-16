@@ -1,6 +1,6 @@
 package tours.config
 
 case class KafkaConfig(
-                        bootstrapServers: String,
-                        topic: String
-                      )
+    bootstrapServers: String,
+    topic: String
+)

@@ -8,8 +8,11 @@ import hotels.database.HotelDao
 import hotels.models.Hotel
 import hotels.services.errors.HotelsServiceError
 
-final case class HotelsServiceImpl[F[_] : MonadThrow](db: HotelDao[F], kafkaProducer: KafkaProducer[F, String, String], topic: String)
-  extends HotelsService[F] {
+final case class HotelsServiceImpl[F[_]: MonadThrow](
+    db: HotelDao[F],
+    kafkaProducer: KafkaProducer[F, String, String],
+    topic: String
+) extends HotelsService[F] {
 
   override def addHotel(hotel: Hotel): F[Either[HotelsServiceError, Unit]] = {
     val operation = for {
@@ -18,7 +21,7 @@ final case class HotelsServiceImpl[F[_] : MonadThrow](db: HotelDao[F], kafkaProd
 
     operation.attempt.map {
       case Right(_) => Right(())
-      case Left(_) => Left(HotelsServiceError.InternalError.default)
+      case Left(_)  => Left(HotelsServiceError.InternalError.default)
     }
   }
 
@@ -29,7 +32,7 @@ final case class HotelsServiceImpl[F[_] : MonadThrow](db: HotelDao[F], kafkaProd
 
     operation.attempt.map {
       case Right(hotels) => Right(hotels)
-      case Left(_) => Left(HotelsServiceError.InternalError.default)
+      case Left(_)       => Left(HotelsServiceError.InternalError.default)
     }
   }
 
@@ -40,44 +43,44 @@ final case class HotelsServiceImpl[F[_] : MonadThrow](db: HotelDao[F], kafkaProd
 
     operation.attempt.map {
       case Right(hotel) if hotel.nonEmpty => Right(hotel.get)
-      case Right(_) => Left(HotelsServiceError.NotFound("Отель не найден"))
-      case Left(_) => Left(HotelsServiceError.InternalError.default)
+      case Right(_)                       => Left(HotelsServiceError.NotFound("Отель не найден"))
+      case Left(_)                        => Left(HotelsServiceError.InternalError.default)
     }
   }
 
   override def editHotelDescription(
-                                     id: Hotel.Id,
-                                     description: String
-                                   ): F[Either[HotelsServiceError, Unit]] = {
+      id: Hotel.Id,
+      description: String
+  ): F[Either[HotelsServiceError, Unit]] = {
     val operation = for {
       _ <- db.editDescription(id, description)
     } yield ()
 
     operation.attempt.map {
       case Right(_) => Right(())
-      case Left(_) => Left(HotelsServiceError.InternalError.default)
+      case Left(_)  => Left(HotelsServiceError.InternalError.default)
     }
   }
 
   override def deleteHotel(
-                            id: Hotel.Id
-                          ): F[Either[HotelsServiceError, Unit]] = {
+      id: Hotel.Id
+  ): F[Either[HotelsServiceError, Unit]] = {
     val operation = for {
       _ <- db.delete(id)
     } yield ()
 
     operation.attempt.map {
       case Right(_) => Right(())
-      case Left(_) => Left(HotelsServiceError.InternalError.default)
+      case Left(_)  => Left(HotelsServiceError.InternalError.default)
     }
   }
 
 }
 
 object HotelsServiceImpl {
-  def impl[F[_] : MonadThrow](
-                               dao: HotelDao[F],
-                               kafkaProducer: KafkaProducer[F, String, String],
-                               topic: String
-                             ): HotelsService[F] = new HotelsServiceImpl[F](dao, kafkaProducer, topic)
+  def impl[F[_]: MonadThrow](
+      dao: HotelDao[F],
+      kafkaProducer: KafkaProducer[F, String, String],
+      topic: String
+  ): HotelsService[F] = new HotelsServiceImpl[F](dao, kafkaProducer, topic)
 }

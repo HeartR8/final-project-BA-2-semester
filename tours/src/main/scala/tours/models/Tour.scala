@@ -11,10 +11,12 @@ import java.util.UUID
 
 @JsonCodec
 final case class Tour(
-                       hotelId: Hotel.Id,
-                       ticketToId: Ticket.Id,
-                       ticketFromId: Ticket.Id,
-                     )
+    tourId: Tour.Id,
+    hotelId: Hotel.Id,
+    ticketToId: Ticket.Id,
+    ticketFromId: Ticket.Id,
+    isBooked: Boolean = false
+)
 
 object Tour {
   @newtype case class Id(value: UUID) {

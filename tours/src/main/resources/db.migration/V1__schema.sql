@@ -15,9 +15,11 @@ CREATE TABLE hotels (
 );
 
 CREATE TABLE tours (
+    tour_id VARCHAR(255) PRIMARY KEY NOT NULL,
     hotel_id VARCHAR(255) REFERENCES hotels(hotel_id),
     ticket_to_id VARCHAR(255) REFERENCES tickets(ticket_id),
-    ticket_from_id VARCHAR(255) REFERENCES tickets(ticket_id)
+    ticket_from_id VARCHAR(255) REFERENCES tickets(ticket_id),
+    is_booked BOOLEAN NOT NULL DEFAULT FALSE
 )
 
 

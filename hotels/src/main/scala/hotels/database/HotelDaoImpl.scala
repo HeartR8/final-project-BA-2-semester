@@ -6,7 +6,7 @@ import doobie.Transactor
 import doobie.implicits._
 import hotels.models.{Hotel, KafkaEvents}
 
-final class HotelDaoImpl[F[_] : MonadCancelThrow](xa: Transactor[F]) extends HotelDao[F] {
+final class HotelDaoImpl[F[_]: MonadCancelThrow](xa: Transactor[F]) extends HotelDao[F] {
 
   override def add(hotel: Hotel): F[Int] =
     (sql"INSERT INTO hotels (hotel_id, name, description, price_per_night) " ++
@@ -41,5 +41,5 @@ final class HotelDaoImpl[F[_] : MonadCancelThrow](xa: Transactor[F]) extends Hot
 }
 
 object HotelDaoImpl {
-  def impl[F[_] : MonadCancelThrow](xa: Transactor[F]): HotelDaoImpl[F] = new HotelDaoImpl[F](xa)
+  def impl[F[_]: MonadCancelThrow](xa: Transactor[F]): HotelDaoImpl[F] = new HotelDaoImpl[F](xa)
 }

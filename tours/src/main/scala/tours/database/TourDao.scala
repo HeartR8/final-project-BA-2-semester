@@ -1,7 +1,9 @@
 package tours.database
 
-import tours.models.Tour
+import tours.models.{AddTour, Tour}
 
 trait TourDao[F[_]] {
-  def add(tour: Tour): F[Int]
+  def add(tour: AddTour): F[Int]
+  def book(tourId: Tour.Id): F[Int]
+
 }

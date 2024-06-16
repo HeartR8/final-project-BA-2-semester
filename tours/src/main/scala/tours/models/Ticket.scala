@@ -12,13 +12,13 @@ import java.util.UUID
 
 @JsonCodec
 final case class Ticket(
-                         id: Ticket.Id,
-                         from: String,
-                         to: String,
-                         departureTime: Instant,
-                         arrivalTime: Instant,
-                         price: Double
-                       )
+    id: Ticket.Id,
+    from: String,
+    to: String,
+    departureTime: Instant,
+    arrivalTime: Instant,
+    price: Double
+)
 
 object Ticket {
   @newtype case class Id(value: UUID) {

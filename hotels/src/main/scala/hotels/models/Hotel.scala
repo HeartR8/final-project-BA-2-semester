@@ -11,11 +11,11 @@ import java.util.UUID
 
 @JsonCodec
 final case class Hotel(
-                        id: Hotel.Id,
-                        name: String,
-                        description: Option[String] = None,
-                        pricePerNight: Double
-                      )
+    id: Hotel.Id,
+    name: String,
+    description: Option[String] = None,
+    pricePerNight: Double
+)
 
 object Hotel {
   @newtype case class Id(value: UUID) {

@@ -9,9 +9,9 @@ import tickets.models.Ticket
 import tickets.services.TicketsService
 import tickets.services.errors.TicketsServiceError.errorMapper
 
-final class TicketsController[F[_] : MonadThrow](
-                                                 ticketsService: TicketsService[F]
-                                               ) {
+final class TicketsController[F[_]: MonadThrow](
+    ticketsService: TicketsService[F]
+) {
 
   private val baseRoute =
     endpoint
@@ -69,9 +69,9 @@ final class TicketsController[F[_] : MonadThrow](
 }
 
 object TicketsController {
-  def impl[F[_] : MonadThrow](
-                               ticketsService: TicketsService[F]
-                             ): TicketsController[F] = {
+  def impl[F[_]: MonadThrow](
+      ticketsService: TicketsService[F]
+  ): TicketsController[F] = {
     new TicketsController[F](ticketsService)
   }
 }

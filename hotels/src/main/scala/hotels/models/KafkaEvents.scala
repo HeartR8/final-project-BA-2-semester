@@ -9,4 +9,3 @@ object KafkaEvents {
 
   case object Delete extends KafkaEvents
 }
-

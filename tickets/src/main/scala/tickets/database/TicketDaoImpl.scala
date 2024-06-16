@@ -13,12 +13,17 @@ import tickets.models.{KafkaEvents, Ticket}
 
 import java.time.Instant
 
-final class TicketDaoImpl[F[_] : MonadCancelThrow](xa: Transactor[F]) extends TicketDao[F] {
+final class TicketDaoImpl[F[_]: MonadCancelThrow](xa: Transactor[F]) extends TicketDao[F] {
   private final implicit val instantPut: Put[Instant] =
     Put.Basic.one(
       JdbcType.TimestampWithTimezone,
-      (stmt, index, instantValue) => stmt.setTimestamp(index, java.sql.Timestamp.from(instantValue)),
-      (resultSet, index, instantValue) => resultSet.updateTimestamp(index, java.sql.Timestamp.from(instantValue))
+      (
+          stmt,
+          index,
+          instantValue
+      ) => stmt.setTimestamp(index, java.sql.Timestamp.from(instantValue)),
+      (resultSet, index, instantValue) =>
+        resultSet.updateTimestamp(index, java.sql.Timestamp.from(instantValue))
     )
 
   override def add(ticket: Ticket): F[Int] = {
@@ -31,18 +36,21 @@ final class TicketDaoImpl[F[_] : MonadCancelThrow](xa: Transactor[F]) extends Ti
     )
   }
 
-  override def get(id: Ticket.Id): F[Option[Ticket]] = sql"SELECT * from tickets WHERE ticket_id = ${id.toString}".query[Ticket].option.transact(
-    xa
-  )
+  override def get(id: Ticket.Id): F[Option[Ticket]] =
+    sql"SELECT * from tickets WHERE ticket_id = ${id.toString}".query[Ticket].option.transact(
+      xa
+    )
 
-  override def getAll: F[NonEmptyList[Ticket]] = sql"SELECT * from tickets".query[Ticket].nel.transact(
-    xa
-  )
+  override def getAll: F[NonEmptyList[Ticket]] =
+    sql"SELECT * from tickets".query[Ticket].nel.transact(
+      xa
+    )
 
   override def editPrice(id: Ticket.Id, price: Double): F[Int] =
     (
       sql"UPDATE tickets SET price = $price WHERE ticket_id = ${id.toString};" ++
-        sql"INSERT INTO tickets_events (ticket_id, event) VALUES (${id.toString}, ${KafkaEvents.Edit.toString})").update.run.transact(
+        sql"INSERT INTO tickets_events (ticket_id, event) VALUES (${id.toString}, ${KafkaEvents.Edit.toString})"
+    ).update.run.transact(
       xa
     )
 
@@ -54,5 +62,5 @@ final class TicketDaoImpl[F[_] : MonadCancelThrow](xa: Transactor[F]) extends Ti
 }
 
 object TicketDaoImpl {
-  def impl[F[_] : MonadCancelThrow](xa: Transactor[F]): TicketDaoImpl[F] = new TicketDaoImpl[F](xa)
+  def impl[F[_]: MonadCancelThrow](xa: Transactor[F]): TicketDaoImpl[F] = new TicketDaoImpl[F](xa)
 }

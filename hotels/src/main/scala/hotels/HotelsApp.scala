@@ -56,7 +56,9 @@ object HotelsApp {
             Port.fromInt(config.http.port),
             new RuntimeException("Invalid http port")
           )
-          _ <- IO.println(s"Go to http://localhost:${config.http.port}/docs/hotels/#/ to open SwaggerUI")
+          _ <- IO.println(
+            s"Go to http://localhost:${config.http.port}/docs/hotels/#/ to open SwaggerUI"
+          )
 
           _ <- EmberServerBuilder.default[IO]
             .withHost(ipv4"0.0.0.0")

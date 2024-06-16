@@ -1,6 +1,6 @@
 package hotels.config
 
 case class KafkaConfig(
-                        bootstrapServers: String,
-                        topic: String
-                      )
+    bootstrapServers: String,
+    topic: String
+)

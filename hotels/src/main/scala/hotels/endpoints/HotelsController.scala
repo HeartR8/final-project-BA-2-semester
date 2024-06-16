@@ -9,9 +9,9 @@ import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 
-final class HotelsController[F[_] : MonadThrow](
-                                                 hotelsService: HotelsService[F]
-                                               ) {
+final class HotelsController[F[_]: MonadThrow](
+    hotelsService: HotelsService[F]
+) {
 
   private val baseRoute =
     endpoint
@@ -69,9 +69,9 @@ final class HotelsController[F[_] : MonadThrow](
 }
 
 object HotelsController {
-  def impl[F[_] : MonadThrow](
-                               hotelsService: HotelsService[F]
-                             ): HotelsController[F] = {
+  def impl[F[_]: MonadThrow](
+      hotelsService: HotelsService[F]
+  ): HotelsController[F] = {
     new HotelsController[F](hotelsService)
   }
 }
