@@ -6,5 +6,7 @@ trait TourDao[F[_]] {
   def add(tour: AddTour): F[Int]
   def book(tourId: Tour.Id): F[Int]
 
+  def addHotel(hotel: Hotel): F[Int]
+
   def deleteHotel(hotelId: Hotel.Id): F[Int]
 }
