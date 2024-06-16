@@ -10,15 +10,17 @@ import hotels.database.{FlywayMigration, HotelDaoImpl}
 import hotels.endpoints.HotelsController
 import hotels.kafka.EventScheduler
 import hotels.services.HotelsServiceImpl
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware.Logger
 import org.typelevel.log4cats.SelfAwareStructuredLogger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import pureconfig.ConfigSource
 import pureconfig.generic.auto._
-import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
 import sttp.tapir.swagger.SwaggerUIOptions
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
+import hotels.metrics.ServerMetrics
 
 object HotelsApp {
 
@@ -30,6 +32,9 @@ object HotelsApp {
     database.makeTransactor[IO](config.database).use { xa: Transactor[IO] =>
       val kafkaProducerSettings = ProducerSettings[IO, String, String]
         .withBootstrapServers(config.kafka.bootstrapServers)
+
+      val prometheusRegistry = PrometheusRegistry.defaultRegistry
+      val prometheusMetrics = ServerMetrics.register[IO](prometheusRegistry)
 
       val kafkaProducerResource = KafkaProducer.resource(kafkaProducerSettings)
 
@@ -49,7 +54,8 @@ object HotelsApp {
           ).processOutboxEvents.start
 
           endpoints = List(
-            hotelsController.endpoints
+            hotelsController.endpoints,
+            List(prometheusMetrics.metricsEndpoint)
           ).flatten
 
           swagger = SwaggerInterpreter(
@@ -60,7 +66,13 @@ object HotelsApp {
             version = "0.0.1"
           )
 
-          httpApp = Http4sServerInterpreter[IO]().toRoutes(swagger ++ endpoints).orNotFound
+          serverOptions = Http4sServerOptions.customiseInterceptors[IO]
+            .metricsInterceptor(
+              prometheusMetrics.metricsInterceptor(ignoreEndpoints = swagger.map(_.endpoint))
+            )
+            .options
+
+          httpApp = Http4sServerInterpreter[IO](serverOptions).toRoutes(swagger ++ endpoints).orNotFound
           httpAppWithLogging = Logger.httpApp(logHeaders = true, logBody = true)(httpApp)
 
           port <- Sync[IO].fromOption(

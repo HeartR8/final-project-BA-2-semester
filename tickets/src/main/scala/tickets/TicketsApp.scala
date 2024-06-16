@@ -5,13 +5,14 @@ import cats.implicits._
 import com.comcast.ip4s._
 import doobie.Transactor
 import fs2.kafka.{KafkaProducer, ProducerSettings}
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware.Logger
 import org.typelevel.log4cats.SelfAwareStructuredLogger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import pureconfig.ConfigSource
 import pureconfig.generic.auto._
-import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
 import sttp.tapir.swagger.SwaggerUIOptions
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import tickets.config.AppConfig
@@ -19,6 +20,7 @@ import tickets.database.{FlywayMigration, TicketDaoImpl}
 import tickets.endpoints.TicketsController
 import tickets.kafka.EventScheduler
 import tickets.services.TicketsServiceImpl
+import tickets.metrics.ServerMetrics
 
 object TicketsApp {
 
@@ -32,6 +34,9 @@ object TicketsApp {
         .withBootstrapServers(config.kafka.bootstrapServers)
 
       val kafkaProducerResource = KafkaProducer.resource(kafkaProducerSettings)
+
+      val prometheusRegistry = PrometheusRegistry.defaultRegistry
+      val prometheusMetrics = ServerMetrics.register[IO](prometheusRegistry)
 
       kafkaProducerResource.use { kafkaProducer =>
         for {
@@ -49,7 +54,8 @@ object TicketsApp {
           ).processOutboxEvents.start
 
           endpoints = List(
-            ticketsController.endpoints
+            ticketsController.endpoints,
+            List(prometheusMetrics.metricsEndpoint)
           ).flatten
 
           swagger = SwaggerInterpreter(
@@ -60,7 +66,14 @@ object TicketsApp {
             version = "0.0.1"
           )
 
-          httpApp = Http4sServerInterpreter[IO]().toRoutes(swagger ++ endpoints).orNotFound
+          serverOptions = Http4sServerOptions.customiseInterceptors[IO]
+            .metricsInterceptor(
+              prometheusMetrics.metricsInterceptor(ignoreEndpoints = swagger.map(_.endpoint))
+            )
+            .options
+
+          httpApp =
+            Http4sServerInterpreter[IO](serverOptions).toRoutes(swagger ++ endpoints).orNotFound
           httpAppWithLogging = Logger.httpApp(logHeaders = true, logBody = true)(httpApp)
 
           port <- Sync[IO].fromOption(

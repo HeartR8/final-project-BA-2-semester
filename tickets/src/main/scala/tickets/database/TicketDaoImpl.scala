@@ -14,16 +14,16 @@ import tickets.models.{KafkaEvents, OutboxEvent, Ticket}
 import java.time.Instant
 import java.util.UUID
 
-final class TicketDaoImpl[F[_] : MonadCancelThrow](xa: Transactor[F]) extends TicketDao[F] {
+final class TicketDaoImpl[F[_]: MonadCancelThrow](xa: Transactor[F]) extends TicketDao[F] {
   implicit val uuidGet: Get[UUID] = Get[String].map(UUID.fromString)
 
   private implicit val instantPut: Put[Instant] =
     Put.Basic.one(
       JdbcType.TimestampWithTimezone,
       (
-        stmt,
-        index,
-        instantValue
+          stmt,
+          index,
+          instantValue
       ) => stmt.setTimestamp(index, java.sql.Timestamp.from(instantValue)),
       (resultSet, index, instantValue) =>
         resultSet.updateTimestamp(index, java.sql.Timestamp.from(instantValue))
@@ -53,7 +53,7 @@ final class TicketDaoImpl[F[_] : MonadCancelThrow](xa: Transactor[F]) extends Ti
     (
       sql"UPDATE tickets SET price = $price WHERE ticket_id = ${id.toString};" ++
         sql"INSERT INTO tickets_events (event_id, ticket_id, event) VALUES (${UUID.randomUUID().toString}, ${id.toString}, ${KafkaEvents.Edit.toString})"
-      ).update.run.transact(
+    ).update.run.transact(
       xa
     )
 
@@ -76,5 +76,5 @@ final class TicketDaoImpl[F[_] : MonadCancelThrow](xa: Transactor[F]) extends Ti
 }
 
 object TicketDaoImpl {
-  def impl[F[_] : MonadCancelThrow](xa: Transactor[F]): TicketDaoImpl[F] = new TicketDaoImpl[F](xa)
+  def impl[F[_]: MonadCancelThrow](xa: Transactor[F]): TicketDaoImpl[F] = new TicketDaoImpl[F](xa)
 }
