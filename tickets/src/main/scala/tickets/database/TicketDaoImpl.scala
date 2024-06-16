@@ -15,7 +15,9 @@ import java.time.Instant
 import java.util.UUID
 
 final class TicketDaoImpl[F[_] : MonadCancelThrow](xa: Transactor[F]) extends TicketDao[F] {
-  private final implicit val instantPut: Put[Instant] =
+  implicit val uuidGet: Get[UUID] = Get[String].map(UUID.fromString)
+
+  private implicit val instantPut: Put[Instant] =
     Put.Basic.one(
       JdbcType.TimestampWithTimezone,
       (
@@ -31,7 +33,7 @@ final class TicketDaoImpl[F[_] : MonadCancelThrow](xa: Transactor[F]) extends Ti
     val departureTime = ticket.departureTime
     val arrivalTime = ticket.arrivalTime
     sql"""INSERT INTO tickets (ticket_id, "from", "to", departure_time, arrival_time, price) VALUES (${ticket.id.toString}, ${ticket.from}, ${ticket.to}, ${departureTime}, ${arrivalTime}, ${ticket.price});
-          INSERT INTO tickets_events (ticket_id, event) VALUES (${ticket.id.toString}, ${KafkaEvents.Add.toString});
+          INSERT INTO tickets_events (event_id, ticket_id, event) VALUES (${UUID.randomUUID().toString}, ${ticket.id.toString}, ${KafkaEvents.Add.toString});
          """.update.run.transact(
       xa
     )
@@ -50,14 +52,14 @@ final class TicketDaoImpl[F[_] : MonadCancelThrow](xa: Transactor[F]) extends Ti
   override def editPrice(id: Ticket.Id, price: Double): F[Int] =
     (
       sql"UPDATE tickets SET price = $price WHERE ticket_id = ${id.toString};" ++
-        sql"INSERT INTO tickets_events (ticket_id, event) VALUES (${id.toString}, ${KafkaEvents.Edit.toString})"
+        sql"INSERT INTO tickets_events (event_id, ticket_id, event) VALUES (${UUID.randomUUID().toString}, ${id.toString}, ${KafkaEvents.Edit.toString})"
       ).update.run.transact(
       xa
     )
 
   override def delete(id: Ticket.Id): F[Int] =
     (sql"DELETE FROM tickets WHERE ticket_id = ${id.toString};" ++
-      sql"INSERT INTO tickets_events (ticket_id, event) VALUES (${id.toString}, ${KafkaEvents.Delete.toString})").update.run.transact(
+      sql"INSERT INTO tickets_events (event_id, ticket_id, event) VALUES (${UUID.randomUUID().toString}, ${id.toString}, ${KafkaEvents.Delete.toString})").update.run.transact(
       xa
     )
 

@@ -6,13 +6,13 @@ import fs2.kafka._
 import org.typelevel.log4cats.SelfAwareStructuredLogger
 import tours.config.KafkaConfig
 import tours.database.TourDao
-import tours.models.{Hotel, HotelEvent, KafkaEvents, TicketEvent}
+import tours.models._
 import tours.services.errors.ToursServiceError
 
 trait CoordinatorEventConsumer[F[_]] {
   def handleHotelEvent(hotelId: Hotel.Id, event: HotelEvent): F[Either[ToursServiceError, Unit]]
 
-  def handleTicketEvent(event: TicketEvent): F[Either[ToursServiceError, Unit]]
+  def handleTicketEvent(ticketId: Ticket.Id, event: TicketEvent): F[Either[ToursServiceError, Unit]]
 }
 
 object CoordinatorEventConsumer {
@@ -55,6 +55,39 @@ object CoordinatorEventConsumer {
         }
       }
 
+      def handleDeleteTicketEvent(hotelId: Ticket.Id): F[Either[ToursServiceError, Unit]] = {
+        val operation = for {
+          _ <- dao.deleteTicket(hotelId)
+        } yield ()
+
+        operation.attempt.map {
+          case Right(_) => Right(())
+          case Left(_) => Left(ToursServiceError.InternalError.default)
+        }
+      }
+
+      def handleEditTicketEvent(hotel: Ticket): F[Either[ToursServiceError, Unit]] = {
+        val operation = for {
+          _ <- dao.editTicket(hotel)
+        } yield ()
+
+        operation.attempt.map {
+          case Right(_) => Right(())
+          case Left(_) => Left(ToursServiceError.InternalError.default)
+        }
+      }
+
+      def handleAddTicketEvent(hotel: Ticket): F[Either[ToursServiceError, Unit]] = {
+        val operation = for {
+          _ <- dao.addTicket(hotel)
+        } yield ()
+
+        operation.attempt.map {
+          case Right(_) => Right(())
+          case Left(_) => Left(ToursServiceError.InternalError.default)
+        }
+      }
+
       def handleHotelEvent(
           hotelId: Hotel.Id,
           event: HotelEvent
@@ -71,6 +104,16 @@ object CoordinatorEventConsumer {
 
       }
 
-      def handleTicketEvent(event: TicketEvent): F[Either[ToursServiceError, Unit]] = ???
+      def handleTicketEvent(ticketId: Ticket.Id, event: TicketEvent): F[Either[ToursServiceError, Unit]] = {
+        val kafkaEvent = KafkaEvents.withNameInsensitive(event.event)
+        kafkaEvent match {
+          case KafkaEvents.Add =>
+            handleAddTicketEvent(event.ticket.get)
+          case KafkaEvents.Edit =>
+            handleEditTicketEvent(event.ticket.get)
+          case KafkaEvents.Delete =>
+            handleDeleteTicketEvent(ticketId)
+        }
+      }
     }
 }

@@ -19,7 +19,7 @@ import tours.config.AppConfig
 import tours.database.{FlywayMigration, TourDaoImpl}
 import tours.endpoints.ToursController
 import tours.kafka.CoordinatorEventConsumer
-import tours.models.{Hotel, HotelEvent, TicketEvent}
+import tours.models.{Hotel, HotelEvent, Ticket, TicketEvent}
 import tours.services.TourServiceImpl
 import tours.services.errors.ToursServiceError
 
@@ -73,14 +73,16 @@ object ToursApp {
               _ <- kafkaTicketsConsumer.subscribeTo(config.kafka.ticketsTopic)
               consumerTicketsStream = kafkaTicketsConsumer.stream.evalMap { committable =>
                 val record = committable.record
-                logger.info(s"Consumed record with key: ${record.key}, value: ${record.value}") *>
-                  coordinatorEventConsumer.handleTicketEvent(
-                    TicketEvent(record.key, record.value)
-                  ).handleErrorWith { error =>
-                    logger.error(error)(
-                      s"Failed to process payment event with key: ${record.key}, value: ${record.value}"
-                    )
-                  }
+                coordinatorEventConsumer.handleTicketEvent(
+                  Ticket.Id.fromString(record.key),
+                  decode[TicketEvent](record.value).getOrElse(
+                    throw ToursServiceError.InternalError.default
+                  )
+                ).handleErrorWith { error =>
+                  logger.error(error)(
+                    s"Failed to process record with key: ${record.key}, value: ${record.value}"
+                  )
+                }
               }.compile.drain
 
               _ <- consumerHotelsStream.start

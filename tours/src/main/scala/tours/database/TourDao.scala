@@ -1,6 +1,6 @@
 package tours.database
 
-import tours.models.{AddTour, Hotel, Tour}
+import tours.models.{AddTour, Hotel, Ticket, Tour}
 
 trait TourDao[F[_]] {
   def add(tour: AddTour): F[Int]
@@ -11,4 +11,10 @@ trait TourDao[F[_]] {
   def editHotel(hotel: Hotel): F[Int]
 
   def deleteHotel(hotelId: Hotel.Id): F[Int]
+
+  def addTicket(ticket: Ticket): F[Int]
+
+  def editTicket(ticket: Ticket): F[Int]
+
+  def deleteTicket(ticketId: Ticket.Id): F[Int]
 }
