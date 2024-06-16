@@ -6,6 +6,8 @@ CREATE TABLE hotels (
 );
 
 CREATE TABLE hotels_events (
+    event_id VARCHAR(255) NOT NULL,
     hotel_id VARCHAR(255) NOT NULL,
-    event VARCHAR(255) NOT NULL
+    event VARCHAR(255) NOT NULL,
+    processed BOOLEAN NOT NULL DEFAULT FALSE
 );

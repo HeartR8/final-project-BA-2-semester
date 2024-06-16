@@ -24,7 +24,7 @@ object Libs {
     val quillVersion = "4.8.4"
     val flywayVersion = "9.17.0"
     val redis4catsVersion = "1.5.2"
-    val scalatestVersion = "3.2.18"
+    val scalatestVersion = "3.2.18.0"
     val testcontainersVersion = "0.41.3"
     val derevoVersion = "0.13.0"
   }
@@ -118,7 +118,8 @@ object Libs {
   )
 
   val scalatest: Seq[ModuleID] = Seq(
-    "org.scalatest" %% "scalatest" % V.scalatestVersion
+    "org.scalatestplus" %% "mockito-5-10" % V.scalatestVersion % "test",
+    "org.scalatest" %% "scalatest" % "3.2.18" % Test
   )
 
   val testcontainers: Seq[ModuleID] = Seq(
@@ -130,5 +131,4 @@ object Libs {
   val derevo: Seq[ModuleID] = Seq(
     "tf.tofu" %% "derevo-cats" % V.derevoVersion
   )
-
 }

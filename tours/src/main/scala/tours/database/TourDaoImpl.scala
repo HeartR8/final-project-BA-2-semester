@@ -3,7 +3,7 @@ package tours.database
 import cats.effect.kernel.MonadCancelThrow
 import doobie.Transactor
 import doobie.implicits.toSqlInterpolator
-import tours.models.{AddTour, Tour}
+import tours.models.{AddTour, Hotel, Tour}
 import doobie.implicits._
 
 import java.util.UUID
@@ -21,6 +21,12 @@ final class TourDaoImpl[F[_]: MonadCancelThrow](xa: Transactor[F]) extends TourD
     )
   }
 
+  override def deleteHotel(hotelId: Hotel.Id): F[Int] = (
+    sql"DELETE FROM hotels WHERE hotel_id = ${hotelId.toString};" ++
+      sql"DELETE FROM tours WHERE hotel_id = ${hotelId.toString}"
+  ).update.run.transact(
+    xa
+  )
 }
 
 object TourDaoImpl {

@@ -23,7 +23,8 @@ object Dependencies {
       Libs.scalatest,
       Libs.fs2,
       Libs.s3,
-      Libs.derevo
+      Libs.derevo,
+      Libs.scalatest
     ).flatten
   }
 

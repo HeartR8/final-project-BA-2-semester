@@ -8,9 +8,12 @@ import fs2.kafka.{KafkaProducer, ProducerSettings}
 import hotels.config.AppConfig
 import hotels.database.{FlywayMigration, HotelDaoImpl}
 import hotels.endpoints.HotelsController
+import hotels.kafka.EventScheduler
 import hotels.services.HotelsServiceImpl
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware.Logger
+import org.typelevel.log4cats.SelfAwareStructuredLogger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 import pureconfig.ConfigSource
 import pureconfig.generic.auto._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
@@ -21,6 +24,8 @@ object HotelsApp {
 
   def run: IO[Unit] = {
     val config = ConfigSource.default.loadOrThrow[AppConfig]
+
+    implicit val logger: SelfAwareStructuredLogger[IO] = Slf4jLogger.getLogger[IO]
 
     database.makeTransactor[IO](config.database).use { xa: Transactor[IO] =>
       val kafkaProducerSettings = ProducerSettings[IO, String, String]
@@ -36,6 +41,12 @@ object HotelsApp {
           hotelDao = HotelDaoImpl.impl[IO](xa)
           hotelsService = HotelsServiceImpl.impl[IO](hotelDao, kafkaProducer, config.kafka.topic)
           hotelsController = HotelsController.impl[IO](hotelsService)
+
+          _ <- EventScheduler.impl(
+            hotelDao,
+            kafkaProducer,
+            config.kafka.topic
+          ).processOutboxEvents.start
 
           endpoints = List(
             hotelsController.endpoints
