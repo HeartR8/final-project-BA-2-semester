@@ -1,0 +1,110 @@
+version: "3.9"
+
+services:
+  zookeeper:
+    container_name: zookeeper
+    image: confluentinc/cp-zookeeper:latest
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka-2:
+    container_name: kafka-2
+    image: confluentinc/cp-kafka:latest
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+      - "9997:9997"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://kafka-2:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_JMX_HOSTNAME: kafka-2
+      KAFKA_JMX_PORT: 9997
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "9090:8080"
+    depends_on:
+      - kafka-2
+    environment:
+      DYNAMIC_CONFIG_ENABLED: true
+
+  kafka-init-topics:
+    container_name: kafka-init-topics
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - kafka-2
+    command: >
+      bash -c "echo 'creating topics...' &&
+        cub kafka-ready -b kafka-2:29092 1 30 &&
+        kafka-topics --create --topic events --partitions 2 --replication-factor 1 --if-not-exists --bootstrap-server kafka-2:29092 &&
+        echo 'Topics created. Exiting...'"
+
+  postgres-hotels:
+    image: postgres
+    container_name: postgres-hotels
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: 1234
+    command:
+      - "-p 5432"
+  hotels-app:
+    container_name: hotels-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres-hotels
+    image: hotels:0.0.1-SNAPSHOT
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka-1:29092"
+
+  postgres-tickets:
+    image: postgres
+    container_name: postgres-tickets
+    restart: always
+    ports:
+      - "5433:5433"
+    environment:
+      POSTGRES_PASSWORD: 1234
+    command:
+      - "-p 5433"
+  tickets-app:
+    container_name: tickets-app
+    ports:
+      - "8082:8082"
+    depends_on:
+      - postgres-tickets
+    image: tickets:0.0.1-SNAPSHOT
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka-1:29092"
+
+  postgres-tours:
+    image: postgres
+    container_name: postgres-tours
+    restart: always
+    ports:
+      - "5434:5434"
+    environment:
+      POSTGRES_PASSWORD: 1234
+    command:
+      - "-p 5434"
+  tours-app:
+    container_name: tours-app
+    ports:
+      - "8083:8083"
+    depends_on:
+      - postgres-tours
+    image: tours:0.0.1-SNAPSHOT
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka-1:29092"
