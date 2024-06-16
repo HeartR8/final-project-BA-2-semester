@@ -2,6 +2,7 @@ package tours.models
 
 import doobie.Get
 import io.circe.generic.JsonCodec
+import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import io.circe.{Decoder, Encoder}
 import io.estatico.newtype.macros.newtype
 import sttp.tapir.CodecFormat.TextPlain
@@ -21,6 +22,9 @@ object Hotel {
   @newtype case class Id(value: UUID) {
     override def toString: String = value.toString
   }
+
+  implicit val jsonDecoder: Decoder[Hotel] = deriveDecoder[Hotel]
+  implicit val jsonEncoder: Encoder[Hotel] = deriveEncoder[Hotel]
 
   object Id {
 

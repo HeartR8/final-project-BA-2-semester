@@ -9,7 +9,7 @@ import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 
-sealed trait ToursServiceError
+sealed trait ToursServiceError extends Exception
 
 object ToursServiceError {
   val errorMapper: EndpointOutput.OneOf[ToursServiceError, ToursServiceError] = oneOf(

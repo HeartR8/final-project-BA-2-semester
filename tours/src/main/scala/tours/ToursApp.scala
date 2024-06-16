@@ -4,7 +4,9 @@ import cats.effect._
 import cats.implicits._
 import com.comcast.ip4s._
 import doobie.Transactor
-import fs2.kafka.{AutoOffsetReset, ConsumerSettings, KafkaConsumer, KafkaProducer, ProducerSettings}
+import fs2.kafka._
+import io.circe._
+import io.circe.parser._
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
@@ -17,8 +19,9 @@ import tours.config.AppConfig
 import tours.database.{FlywayMigration, TourDaoImpl}
 import tours.endpoints.ToursController
 import tours.kafka.CoordinatorEventConsumer
-import tours.models.{HotelEvent, TicketEvent}
+import tours.models.{Hotel, HotelEvent, TicketEvent}
 import tours.services.TourServiceImpl
+import tours.services.errors.ToursServiceError
 
 object ToursApp {
 
@@ -55,12 +58,16 @@ object ToursApp {
                 val record = committable.record
                 logger.info(s"Consumed record with key: ${record.key}, value: ${record.value}") *>
                   coordinatorEventConsumer.handleHotelEvent(
-                    HotelEvent(record.key, record.value)
+                    Hotel.Id.fromString(record.key),
+                    decode[HotelEvent](record.value).getOrElse(
+                      throw ToursServiceError.InternalError.default
+                    )
                   ).handleErrorWith { error =>
                     logger.error(error)(
                       s"Failed to process record with key: ${record.key}, value: ${record.value}"
                     )
                   }
+
               }.compile.drain
 
               _ <- kafkaTicketsConsumer.subscribeTo(config.kafka.ticketsTopic)
