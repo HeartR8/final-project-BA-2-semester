@@ -54,7 +54,7 @@ object ToursApp {
               _ <- FlywayMigration.migrate[IO](config.database)
 
               tourDao = TourDaoImpl.impl[IO](xa)
-              tourService = TourServiceImpl.impl[IO](tourDao, kafkaProducer)
+              tourService = TourServiceImpl.impl[IO](tourDao)
               tourController = ToursController.impl[IO](tourService)
               coordinatorEventConsumer = CoordinatorEventConsumer.impl[IO](tourDao, config.kafka)
 

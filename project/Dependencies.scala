@@ -24,7 +24,7 @@ object Dependencies {
       Libs.fs2,
       Libs.s3,
       Libs.derevo,
-      Libs.scalatest
+      Libs.mockito
     ).flatten
   }
 
